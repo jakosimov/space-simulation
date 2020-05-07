@@ -7,7 +7,10 @@
 #define WIDTH 1980
 #define HEIGHT 1080
 
-#define WAIT_TIME 10000 // Microseconds
+#define WAIT_TIME 1000 // Microseconds
+
+#define TRAIL_WIDTH 2
+#define TRAIL_DURATION -1
 
 using std::vector;
 
@@ -118,12 +121,11 @@ void applyGravity(vector<Object*> objects) {
   }
 }
 
-#define TRAIL_WIDTH 7
-#define TRAIL_DURATION -1
+
 
 vector<Object*> initialCondition() {
   vector<Object*> objects;
-  objects.push_back(new Planet(550, 550, 0, 0, 150, 10000));
+  objects.push_back(new Planet(550, 550, 0, 0, 50, 10000));
   objects.push_back(new Planet(550, 700, 2.7, 0, 10, 10000 / 80));
   return objects;
 }
@@ -170,18 +172,17 @@ int main() {
       }
     }
 
-    window.clear();
+    window.clear(BACKGROUND_COLOR);
+    
     for (int x = 0 ; x < WIDTH ; x++) {
       for (int y = 0 ; y < HEIGHT ; y++) {
         VisitInfo visit = visits[WIDTH * y + x];
-        sf::RectangleShape shape(sf::Vector2f(TRAIL_WIDTH,TRAIL_WIDTH));
-        shape.setPosition(x, y);
         if (visit.lastVisited != -1 && (std::abs(time - visit.lastVisited) < TRAIL_DURATION || TRAIL_DURATION == -1)) {
+          sf::RectangleShape shape(sf::Vector2f(TRAIL_WIDTH,TRAIL_WIDTH));
+          shape.setPosition(x, y);
           shape.setFillColor(TRAIL_COLOR);
-        } else {
-          shape.setFillColor(BACKGROUND_COLOR);
+          window.draw(shape);
         }
-        window.draw(shape);        
       }
     }
     for (Object* object : objects) {
