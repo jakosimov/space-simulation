@@ -13,7 +13,7 @@
 #define WAIT_TIME 100 // Microseconds
 
 #define TRAIL_WIDTH 2
-#define TRAIL_DURATION -1
+#define TRAIL_DURATION -2
 
 #define GRAVITY_COEFFICIENT 0.00001
 #define LARGE_MASS 10000
@@ -131,11 +131,19 @@ bool Point::operator==(const Point o) const {
   return x == o.x && y == o.y;
 }
 
+Planet* placeSatellite(Planet p, double distance) {
+  double speed = std::sqrt(GRAVITY_COEFFICIENT * p.mass() / distance);
+  return new Planet(p.x(), p.y()-distance, speed, 0, 5, 0.00001);
+}
 
 vector<Object*> Universe::initialCondition() {
     vector<Object*> objects;
-    objects.push_back(new Planet(550, 550, 0, 0, 10, LARGE_MASS));
-    objects.push_back(new Planet(550, 550 - DISTANCE, INITIAL_SPEED, 0, 5, 0.00001));
+    Planet* mainPlanet = new Planet(550, 550, 0, 0, 10, LARGE_MASS);
+    objects.push_back(mainPlanet);
+    // objects.push_back(new Planet(550, 550 - DISTANCE, INITIAL_SPEED, 0, 5, 0.00001));
+    objects.push_back(placeSatelite(*mainPlanet, 200));
+    objects.push_back(placeSatelite(*mainPlanet, 100));
+    objects.push_back(placeSatelite(*mainPlanet, 400));
     objects.push_back(new Planet(200, 200, 0.01, 0, 10, 10));
     return objects;
 }
@@ -166,7 +174,7 @@ void Universe::freeObjects() {
 }
 
 void Universe::clearVisited() {
-  if (TRAIL_DURATION != -1) {
+  if (TRAIL_DURATION >= 0) {
     map<Point, int>::iterator iter = visited.begin();
     while (iter != visited.end()) {
       int lastVisit = iter->second;
@@ -207,7 +215,7 @@ void Universe::update() {
     object->update();
     double x = object->x();
     double y = object->y();
-    visited[Point(x, y)] = currentTime;
+    visited[Point(std::round(x), std::round(y))] = currentTime;
   }
   clearVisited();
 }
@@ -218,7 +226,7 @@ void Universe::draw(sf::RenderTarget& target, sf::RenderStates states) const {
     int y = get<0>(element).y;
     int lastVisit = get<1>(element);
 
-    if (TRAIL_DURATION == -1 || (currentTime - lastVisit < TRAIL_DURATION)) {
+    if (TRAIL_DURATION != -2 && (TRAIL_DURATION == -1 || (currentTime - lastVisit < TRAIL_DURATION))) {
       sf::RectangleShape shape(sf::Vector2f(TRAIL_WIDTH,TRAIL_WIDTH));
       shape.setPosition(x - (int)xOrigin(), y - yOrigin());
       shape.setFillColor(TRAIL_COLOR);
@@ -235,6 +243,8 @@ void Universe::translate(double dx, double dy) {
   _x += dx;
   _y += dy;
 }
+
+
 
 int main() {
   sf::RenderWindow window(sf::VideoMode(WIDTH, HEIGHT), "Hello world");
