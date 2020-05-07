@@ -16,9 +16,6 @@
 #define TRAIL_DURATION -2
 
 #define GRAVITY_COEFFICIENT 0.00001
-#define LARGE_MASS 10000
-#define DISTANCE 200
-#define INITIAL_SPEED std::sqrt(GRAVITY_COEFFICIENT * LARGE_MASS / DISTANCE)
 
 using std::vector;
 using std::map;
@@ -138,12 +135,11 @@ Planet* placeSatellite(Planet p, double distance) {
 
 vector<Object*> Universe::initialCondition() {
     vector<Object*> objects;
-    Planet* mainPlanet = new Planet(550, 550, 0, 0, 10, LARGE_MASS);
+    Planet* mainPlanet = new Planet(550, 550, 0, 0, 10, 10000);
     objects.push_back(mainPlanet);
-    // objects.push_back(new Planet(550, 550 - DISTANCE, INITIAL_SPEED, 0, 5, 0.00001));
-    objects.push_back(placeSatelite(*mainPlanet, 200));
-    objects.push_back(placeSatelite(*mainPlanet, 100));
-    objects.push_back(placeSatelite(*mainPlanet, 400));
+    objects.push_back(placeSatellite(*mainPlanet, 200));
+    objects.push_back(placeSatellite(*mainPlanet, 100));
+    objects.push_back(placeSatellite(*mainPlanet, 400));
     objects.push_back(new Planet(200, 200, 0.01, 0, 10, 10));
     return objects;
 }
