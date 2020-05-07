@@ -105,56 +105,102 @@ public:
   }
 };
 
-void applyGravity(vector<Object*> objects) {
-  for (Object* source : objects) {
-    for (Object* target : objects) {
-      if (source == target) {
-        continue;
-      }
-      double forceCoeff = 0.1;
-      double distance = source->distance(target);
-      double forceStrength = forceCoeff * source->mass() * target->mass() / square(distance);
-      double forceX = forceStrength * (source->x() - target->x()) / distance;
-      double forceY = forceStrength * (source->y() - target->y()) / distance;
-      target->applyForce(forceX, forceY);
-    }
-  }
-}
 
-
-
-vector<Object*> initialCondition() {
-  vector<Object*> objects;
-  objects.push_back(new Planet(550, 550, 0, 0, 50, 10000));
-  objects.push_back(new Planet(550, 700, 2.7, 0, 10, 10000 / 80));
-  return objects;
-}
-
-void freeObjects(vector<Object*> objects) {
-  for (Object* object : objects) {
-    free(object);
-  }
-}
 
 struct VisitInfo {
   int lastVisited;
 };
 
+class Universe : public sf::Drawable {
+  vector<Object*> objects;
+  vector<VisitInfo> visits;
+  int currentTime;
+
+
+  vector<Object*> initialCondition() {
+    vector<Object*> objects;
+    objects.push_back(new Planet(550, 550, 0, 0, 50, 10000));
+    objects.push_back(new Planet(550, 700, 1.7, 0, 10, 10000 / 80));
+    return objects;
+  }
+
+  void applyGravity() {
+    for (Object* source : objects) {
+      for (Object* target : objects) {
+        if (source == target) {
+          continue;
+        }
+        double forceCoeff = 0.1;
+        double distance = source->distance(target);
+        double forceStrength = forceCoeff * source->mass() * target->mass() / square(distance);
+        double forceX = forceStrength * (source->x() - target->x()) / distance;
+        double forceY = forceStrength * (source->y() - target->y()) / distance;
+        target->applyForce(forceX, forceY);
+      }
+    }
+  }
+
+  void resetVisits() {
+    for (int i = 0 ; i < WIDTH*HEIGHT ; i++) {
+      visits[i].lastVisited = -1;
+    }    
+  }
+
+  void freeObjects() {
+    for (Object* object : objects) {
+      free(object);
+    }
+  }
+  
+public:
+  Universe() {
+    objects = initialCondition();
+    visits.resize(WIDTH * HEIGHT);
+    resetVisits();
+  }
+
+  void reset() {
+    freeObjects();
+    resetVisits();
+    objects = initialCondition();
+  }
+
+  void update() {
+    currentTime++;
+    applyGravity();
+    for (Object* object : objects) {
+      object->update();
+      double x = object->x();
+      double y = object->y();
+      if (x >= 0 && x < WIDTH && y >= 0 && y < HEIGHT) {
+        visits[WIDTH * (int)y + (int)x].lastVisited = currentTime;        
+      }
+    }
+  }
+
+  virtual void draw(sf::RenderTarget& target, sf::RenderStates states) const {
+    for (int x = 0 ; x < WIDTH ; x++) {
+      for (int y = 0 ; y < HEIGHT ; y++) {
+        VisitInfo visit = visits[WIDTH * y + x];
+        if (visit.lastVisited != -1 && (std::abs(currentTime - visit.lastVisited) < TRAIL_DURATION || TRAIL_DURATION == -1)) {
+          sf::RectangleShape shape(sf::Vector2f(TRAIL_WIDTH,TRAIL_WIDTH));
+          shape.setPosition(x, y);
+          shape.setFillColor(TRAIL_COLOR);
+          target.draw(shape);
+        }
+      }
+    }
+    
+    for (Object* object : objects) {
+      target.draw(*object);
+    }
+  }
+  
+};
 
 int main() {
   sf::RenderWindow window(sf::VideoMode(WIDTH, HEIGHT), "Hello world");
-  vector<Object*> objects = initialCondition();
-  vector<VisitInfo> visits;
-
-
-  
-  visits.resize(WIDTH * HEIGHT);
-
-  for (int i = 0 ; i < WIDTH*HEIGHT ; i++) {
-    visits[i].lastVisited = -1;
-  }
-
-  int time = 0;
+  Universe universe;
 
   while (window.isOpen()) {
     sf::Event event;
@@ -164,42 +210,17 @@ int main() {
         window.close();
       } else if (event.type == sf::Event::KeyPressed) {
         if (event.key.code == sf::Keyboard::Space) {
-          objects = initialCondition();
-          for (int i = 0 ; i < WIDTH*HEIGHT ; i++) {
-            visits[i].lastVisited = -1;
-          }
+          universe.reset();
         }
       }
     }
-
     window.clear(BACKGROUND_COLOR);
-    
-    for (int x = 0 ; x < WIDTH ; x++) {
-      for (int y = 0 ; y < HEIGHT ; y++) {
-        VisitInfo visit = visits[WIDTH * y + x];
-        if (visit.lastVisited != -1 && (std::abs(time - visit.lastVisited) < TRAIL_DURATION || TRAIL_DURATION == -1)) {
-          sf::RectangleShape shape(sf::Vector2f(TRAIL_WIDTH,TRAIL_WIDTH));
-          shape.setPosition(x, y);
-          shape.setFillColor(TRAIL_COLOR);
-          window.draw(shape);
-        }
-      }
-    }
-    for (Object* object : objects) {
-      object->update();
-      window.draw(*object);
-      double x = object->x();
-      double y = object->y();
-      if (x >= 0 && x < WIDTH && y >= 0 && y < HEIGHT) {
-        visits[WIDTH * (int)y + (int)x].lastVisited = time;        
-      }
-    }
+    universe.update();
+    window.draw(universe);
 
 
-    applyGravity(objects);
     window.display();
     usleep(WAIT_TIME);
-    time++;
   }
   
 
