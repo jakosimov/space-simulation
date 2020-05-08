@@ -31,19 +31,19 @@ double square(double a) {
 }
 
 void Object::move() {
-    _x += _dx;
-    _y += _dy;
+  _x += _dx;
+  _y += _dy;
 }
 
 Object::Object() {}
   
 Object::Object(double x, double y, double dx, double dy, double mass) {
-    _x = x;
-    _y = y;
-    _dx = dx;
-    _dy = dy;
-    _fx = _fy = 0.0;
-    _mass = mass;
+  _x = x;
+  _y = y;
+  _dx = dx;
+  _dy = dy;
+  _fx = _fy = 0.0;
+  _mass = mass;
 }
 
 void Object::draw(sf::RenderTarget& t, const Universe* u) const {}
@@ -96,18 +96,19 @@ Planet::Planet(double x, double y, double dx, double dy, double radius, double m
 }
 
 void Planet::draw(sf::RenderTarget& target, const Universe* universe) const {
-  sf::CircleShape shape(radius());
+  sf::CircleShape shape(radius() * universe->scale());
   shape.setFillColor(PLANET_COLOR);
-  int x0 = x() - universe->xOrigin();
-  int y0 = y() - universe->yOrigin();
+  Point scaledPoint = scalePoints(Point(x(), y()), universe);
+  int x0 = scaledPoint.x;
+  int y0 = scaledPoint.y;
   shape.setPosition(x0 - radius(), y0 - radius());
   target.draw(shape);
 }
 
 
 Point::Point(int _x, int _y) {
-    x = _x;
-    y = _y;
+  x = _x;
+  y = _y;
 }
 
 bool Point::operator>(const Point o) const {
@@ -133,15 +134,26 @@ Planet* placeSatellite(Planet p, double distance) {
   return new Planet(p.x(), p.y()-distance, speed, 0, 5, 0.00001);
 }
 
+void Universe::increaseScale(double s) {
+  _scale *= s;
+}
+
+Point scalePoints(Point p, const Universe* universe) {
+  int x = (p.x - universe->xOrigin()) * universe->scale();
+  int y = (p.y - universe->yOrigin()) * universe->scale();
+
+  return Point(x, y);
+}
+
 vector<Object*> Universe::initialCondition() {
-    vector<Object*> objects;
-    Planet* mainPlanet = new Planet(550, 550, 0, 0, 10, 10000);
-    objects.push_back(mainPlanet);
-    objects.push_back(placeSatellite(*mainPlanet, 200));
-    objects.push_back(placeSatellite(*mainPlanet, 100));
-    objects.push_back(placeSatellite(*mainPlanet, 400));
-    objects.push_back(new Planet(200, 200, 0.01, 0, 10, 10));
-    return objects;
+  vector<Object*> objects;
+  Planet* mainPlanet = new Planet(550, 550, 0, 0, 10, 10000);
+  objects.push_back(mainPlanet);
+  objects.push_back(placeSatellite(*mainPlanet, 200));
+  objects.push_back(placeSatellite(*mainPlanet, 100));
+  objects.push_back(placeSatellite(*mainPlanet, 400));
+  objects.push_back(new Planet(200, 200, 0.01, 0, 10, 10));
+  return objects;
 }
 
 void Universe::applyGravity() {
@@ -188,6 +200,11 @@ Universe::Universe() {
   resetVisits();
   _x = 0;
   _y = 0;
+  _scale = 1.0;
+}
+
+double Universe::scale() const {
+  return _scale;
 }
 
 double Universe::xOrigin() const {
@@ -260,7 +277,9 @@ int main() {
         }
       }
     }
+    double scaling = 1.001;
     double moveDistance = 0.1;
+
     if (sf::Keyboard::isKeyPressed(sf::Keyboard::Up)) {
       universe.translate(0, -moveDistance);
     }
@@ -272,6 +291,12 @@ int main() {
     }
     if (sf::Keyboard::isKeyPressed(sf::Keyboard::Right)) {
       universe.translate(moveDistance, 0);
+    }
+    if (sf::Keyboard::isKeyPressed(sf::Keyboard::LShift)) {
+      universe.increaseScale(scaling);
+    }
+    if (sf::Keyboard::isKeyPressed(sf::Keyboard::LControl)) {
+      universe.increaseScale(1 / scaling);
     }
     
     window.clear(BACKGROUND_COLOR);

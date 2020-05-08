@@ -44,6 +44,7 @@ class Universe : public sf::Drawable {
   map<Point, int> visited;
   int currentTime;
   double _x, _y;
+  double _scale;
 
   vector<Object*> initialCondition();
   void applyGravity();
@@ -55,6 +56,8 @@ public:
   Universe();
   double xOrigin() const;
   double yOrigin() const;
+  double scale() const;
+  void increaseScale(double);
   void reset();
   void update();
   void translate(double, double);
@@ -70,5 +73,6 @@ public:
   void draw(sf::RenderTarget&, const Universe*) const;
 };
 
-
+Planet* placeSatellite(Planet, double);
+Point scalePoints(Point p, const Universe*);
 
