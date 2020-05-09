@@ -278,7 +278,7 @@ int main() {
       }
     }
     double scaling = 1.001;
-    double moveDistance = 0.1;
+    double moveDistance = 0.4 / universe.scale();
 
     if (sf::Keyboard::isKeyPressed(sf::Keyboard::Up)) {
       universe.translate(0, -moveDistance);
