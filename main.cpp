@@ -97,6 +97,7 @@ Planet::Planet(double x, double y, double dx, double dy, double radius, double m
 
 void Planet::draw(sf::RenderTarget& target, const Universe* universe) const {
   sf::CircleShape shape(radius() * universe->scale());
+  shape.setPointCount(60);
   shape.setFillColor(PLANET_COLOR);
   Point scaledPoint = scalePoints(Point(x(), y()), universe);
   int x0 = scaledPoint.x;
