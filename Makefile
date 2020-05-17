@@ -8,3 +8,6 @@ main.o: main.cpp
 
 run: all
 	./output
+
+clean:
+	rm *.o *~ output 

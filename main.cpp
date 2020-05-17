@@ -16,6 +16,7 @@
 #define TRAIL_DURATION -2
 
 #define GRAVITY_COEFFICIENT 0.00001
+#define PLANET_POINT_COUNT 100
 
 using std::vector;
 using std::map;
@@ -35,23 +36,19 @@ void Object::move() {
   _y += _dy;
 }
 
-Object::Object() {}
-  
-Object::Object(double x, double y, double dx, double dy, double mass) {
+Object::Object(double x, double y, double dx, double dy, double mass, ObjectType type) {
   _x = x;
   _y = y;
   _dx = dx;
   _dy = dy;
   _fx = _fy = 0.0;
   _mass = mass;
+  _type = type;
 }
-
-void Object::draw(sf::RenderTarget& t, const Universe* u) const {}
 
 double Object::x() const {
   return _x;
 }
-
 
 double Object::y() const {
   return _y;
@@ -69,6 +66,10 @@ double Object::mass() const {
   return _mass;
 }
 
+ObjectType Object::type() const {
+  return _type;
+}
+
 void Object::applyForce(double fx, double fy) {
   _fx += fx;
   _fy += fy;
@@ -77,8 +78,12 @@ void Object::applyForce(double fx, double fy) {
 double Object::distance(Object* o) const {
   return std::sqrt(square(x() - o->x()) + square(y() - o->y()));
 }
-  
-void Object::update() {
+
+vector<Object*> Universe::getObjects() {
+  return objects;
+}
+
+void Object::update(Universe universe) {
   move();
   _dx += _fx / _mass;
   _dy += _fy / _mass;
@@ -86,18 +91,32 @@ void Object::update() {
   _fy = 0.0;
 }
 
-
 double Planet::radius() const {
   return _radius;
 }
   
-Planet::Planet(double x, double y, double dx, double dy, double radius, double mass) : Object(x, y, dx, dy, mass) {
+Planet::Planet(double x, double y, double dx, double dy, double radius, double mass) : Object(x, y, dx, dy, mass, PlanetType) {
   _radius = radius;
+}
+
+void Planet::update(Universe universe) {
+  Object::update(universe);
+  for (Object* object : universe.getObjects()) {
+    if (object == this) {
+      continue;
+    }
+    
+    if (object->type() == PlanetType) {
+      if (isOverlapping( *((Planet*)object) )) {
+        std::cout << "Collision!" << std::endl;
+      }
+    }
+  }
 }
 
 void Planet::draw(sf::RenderTarget& target, const Universe* universe) const {
   sf::CircleShape shape(radius() * universe->scale());
-  shape.setPointCount(60);
+  shape.setPointCount(PLANET_POINT_COUNT);
   shape.setFillColor(PLANET_COLOR);
   Point scaledPoint = scalePoints(Point(x(), y()), universe);
   int x0 = scaledPoint.x;
@@ -106,6 +125,10 @@ void Planet::draw(sf::RenderTarget& target, const Universe* universe) const {
   target.draw(shape);
 }
 
+bool Planet::isOverlapping(Planet o) const {
+  double minDistance = radius() + o.radius();
+  return distance(&o) <= minDistance;
+}
 
 Point::Point(int _x, int _y) {
   x = _x;
@@ -130,9 +153,9 @@ bool Point::operator==(const Point o) const {
   return x == o.x && y == o.y;
 }
 
-Planet* placeSatellite(Planet p, double distance) {
+Planet* placeSatellite(Planet p, double distance, double radius) {
   double speed = std::sqrt(GRAVITY_COEFFICIENT * p.mass() / distance);
-  return new Planet(p.x(), p.y()-distance, speed, 0, 5, 0.00001);
+  return new Planet(p.x(), p.y()-distance, speed, 0, radius, 0.00001);
 }
 
 void Universe::increaseScale(double s) {
@@ -146,15 +169,26 @@ Point scalePoints(Point p, const Universe* universe) {
   return Point(x, y);
 }
 
-vector<Object*> Universe::initialCondition() {
+vector<Object*> initialCondition1() {
   vector<Object*> objects;
-  Planet* mainPlanet = new Planet(550, 550, 0, 0, 10, 10000);
+  Planet* mainPlanet = new Planet(550, 550, 0, 0, 80, 10000);
   objects.push_back(mainPlanet);
-  objects.push_back(placeSatellite(*mainPlanet, 200));
-  objects.push_back(placeSatellite(*mainPlanet, 100));
-  objects.push_back(placeSatellite(*mainPlanet, 400));
+  objects.push_back(placeSatellite(*mainPlanet, 1000, 40));
+  objects.push_back(placeSatellite(*mainPlanet, 1400, 60));
+  objects.push_back(placeSatellite(*mainPlanet, 2000, 40));
   objects.push_back(new Planet(200, 200, 0.01, 0, 10, 10));
   return objects;
+}
+
+vector<Object*> initialCondition2() {
+  vector<Object*> objects;
+  objects.push_back(new Planet(200, 200, 0, 0, 10, 1));
+  objects.push_back(new Planet(500, 200, 0, 0, 50, 10000));
+  return objects;
+}
+
+vector<Object*> Universe::initialCondition() {
+  return initialCondition2();
 }
 
 void Universe::applyGravity() {
@@ -226,7 +260,7 @@ void Universe::update() {
   currentTime++;
   applyGravity();
   for (Object* object : objects) {
-    object->update();
+    object->update(*this);
     double x = object->x();
     double y = object->y();
     visited[Point(std::round(x), std::round(y))] = currentTime;
@@ -258,8 +292,6 @@ void Universe::translate(double dx, double dy) {
   _y += dy;
 }
 
-
-
 int main() {
   sf::RenderWindow window(sf::VideoMode(WIDTH, HEIGHT), "Hello world");
   Universe universe;
@@ -278,6 +310,7 @@ int main() {
         }
       }
     }
+
     double scaling = 1.001;
     double moveDistance = 0.4 / universe.scale();
 
@@ -307,7 +340,6 @@ int main() {
     window.display();
     usleep(WAIT_TIME);
   }
-  
 
   return 0;
 }

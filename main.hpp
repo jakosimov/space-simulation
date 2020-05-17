@@ -7,15 +7,16 @@ using std::map;
 
 class Universe;
 
+enum ObjectType { PlanetType, PlaceholderType };
+
 class Object {
   double _x, _y, _dx, _dy, _fx, _fy, _mass;
+  ObjectType _type;
 
   void move();
 
 protected:
-  Object();
-
-  Object(double,double,double,double,double);
+  Object(double,double,double,double,double,ObjectType);
 
 public:
   double x() const;
@@ -24,11 +25,13 @@ public:
   double dy() const;
   double mass() const;
 
+  ObjectType type() const;
+
   void applyForce(double,double);
   double distance(Object*) const;
 
-  void update();
-  virtual void draw(sf::RenderTarget&, const Universe*) const;
+  virtual void update(Universe);
+  virtual void draw(sf::RenderTarget&, const Universe*) const = 0;
 };
 
 struct Point {
@@ -57,6 +60,7 @@ public:
   double xOrigin() const;
   double yOrigin() const;
   double scale() const;
+  vector<Object*> getObjects();
   void increaseScale(double);
   void reset();
   void update();
@@ -71,6 +75,8 @@ public:
   double radius() const;
   Planet(double, double, double, double, double, double);
   void draw(sf::RenderTarget&, const Universe*) const;
+  bool isOverlapping(Planet planet) const;
+  void update(Universe);
 };
 
 Planet* placeSatellite(Planet, double);
