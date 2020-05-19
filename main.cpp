@@ -15,8 +15,8 @@ using std::vector;
 sf::Font font;
 
 sf::Color* SPACE_COLOR   = new sf::Color(0, 0, 20);
-sf::Color* PLAYER_COLOR  = new sf::Color(255, 255, 255);
-sf::Color* EXHAUST_COLOR = new sf::Color(0, 255, 0);
+sf::Color* PLAYER_COLOR  = new sf::Color(50, 255, 100);
+sf::Color* EXHAUST_COLOR = new sf::Color(255, 0, 0);
 sf::Color* STAR_COLOR = new sf::Color(100, 100, 100);
 
 // Vad kan denna funktionen göra, tro?
@@ -440,7 +440,7 @@ void Player::draw(sf::RenderTarget& target, const Universe* universe) const {
 // Ritar den gröna 'elden' bakom spelarens UFO.
 void Player::drawExhaust(sf::RenderTarget& target, const Universe* universe) const {
   double dx = 0, dy = 0;
-  double dist = 2;
+  double dist = 10;
 
   if (sf::Keyboard::isKeyPressed(sf::Keyboard::A)) {
     dx -= 1;
@@ -532,15 +532,15 @@ void Game::drawMainMenu(sf::RenderTarget& target) const {
   target.draw(text);
 
   text.setString(L"Q: Vad kan man egentligen göra i simulationen?");
-  centerText(340, 20 * 1980 / WIDTH, text);
+  centerText(350, 20 * 1980 / WIDTH, text);
   target.draw(text);
 
-  text.setString(L"A: Inte mycket egentligen, man kan mest åka runt i ditt UFO och putta på olika planeter,");
-  centerText(360, 20 * 1980 / WIDTH, text);
-  target.draw(text);
-
-  text.setString(L"och se vad som händer med deras omloppsbanor.");
+  text.setString(L"A: Inte mycket, man kan mest åka runt i ditt gröna UFO och putta på olika");
   centerText(380, 20 * 1980 / WIDTH, text);
+  target.draw(text);
+
+  text.setString(L"planeter, och se vad som händer med deras omloppsbanor.");
+  centerText(410, 20 * 1980 / WIDTH, text);
   target.draw(text);
 }
 

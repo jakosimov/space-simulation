@@ -32,7 +32,7 @@ Planet* placeSatellite(Planet centre, double distance, double radius, sf::Color*
 
 
 // Definition av färgerna.
-sf::Color* SUN     = new sf::Color(255, 255, 200);
+sf::Color* SUN     = new sf::Color(255, 255, 100);
 sf::Color* MERCURY = new sf::Color(100, 100, 100);
 sf::Color* VENUS   = new sf::Color(255, 200, 200);
 sf::Color* EARTH   = new sf::Color(100, 200, 255);

@@ -9,16 +9,16 @@ using std::map;
 
 #define GRAVITY_COEFFICIENT 0.0001
 
-#define WIDTH 1980 / 2
-#define HEIGHT 1080 / 2
+#define WIDTH 1980
+#define HEIGHT 1080
 
 #define WAIT_TIME 10 // Microseconds
 
-#define PLANET_POINT_COUNT 100
+#define PLANET_POINT_COUNT 1000
 #define SCALE_FACTOR 1.001
 #define CAMERA_MOVE_DISTANCE_FACTOR 0.4
 
-#define PLAYER_PUSH_STRENGTH 0.000001
+#define PLAYER_PUSH_STRENGTH 0.00001
 #define SHIP_MASS 0.1
 #define SHIP_RADIUS 50
 #define PLANET_MASS 0.1
