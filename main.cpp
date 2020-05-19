@@ -7,47 +7,17 @@
 #include <tuple>
 #include "main.hpp"
 
-#define WIDTH 1980
-#define HEIGHT 1080
-
-#define WAIT_TIME 100 // Microseconds
-
-#define TRAIL_WIDTH 2
-#define TRAIL_DURATION -2
-
-#define GRAVITY_COEFFICIENT 0.0001
-#define PLANET_POINT_COUNT 100
-
-#define SHIP_MASS 1
-#define SHIP_RADIUS 10
-
-#define SCALE_FACTOR 1.001;
-#define CAMERA_MOVE_DISTANCE_FACTOR 0.4
-
 using std::get;
 using std::map;
 using std::pair;
 using std::vector;
 
-// Definition av alla färger
-namespace Colors {
-  sf::Color* MERCURY = new sf::Color(255, 100, 100);
-  sf::Color* VENUS   = new sf::Color(255, 100, 100);
-  sf::Color* EARTH   = new sf::Color(255, 100, 100);
-  sf::Color* MARS    = new sf::Color(255, 100, 100);
-  sf::Color* JUPITER = new sf::Color(255, 100, 100);
-  sf::Color* SATURN  = new sf::Color(255, 100, 100);
-  sf::Color* URANUS  = new sf::Color(255, 100, 100);
-  sf::Color* NEPTUNE = new sf::Color(255, 100, 100);
-  sf::Color* PLUTO   = new sf::Color(255, 100, 100);
-  sf::Color* SPACE   = new sf::Color(0, 0, 0);
-  sf::Color* PLAYER  = new sf::Color(255, 255, 255);
-  sf::Color* EXHAUST = new sf::Color(0, 255, 0);
-}
+sf::Font font;
 
-sf::Color* TRAIL_COLOR = new sf::Color(0xFF, 0xE6, 0x6D);
-sf::Color* PLANET_COLOR = new sf::Color(255, 100, 100);
-
+sf::Color* SPACE_COLOR   = new sf::Color(0, 0, 20);
+sf::Color* PLAYER_COLOR  = new sf::Color(255, 255, 255);
+sf::Color* EXHAUST_COLOR = new sf::Color(0, 255, 0);
+sf::Color* STAR_COLOR = new sf::Color(100, 100, 100);
 
 // Vad kan denna funktionen göra, tro?
 double square(double a) {
@@ -55,12 +25,6 @@ double square(double a) {
 }
 
 // -- Metoder för Object ------
-
-// Objektets position uppdateras baserat på den nuvarande hastigheten.
-void Object::move() {
-  _x += _dx;
-  _y += _dy;
-}
 
 // Constructor för Object.
 Object::Object(double x, double y, double dx, double dy, double mass, ObjectType type) {
@@ -73,6 +37,11 @@ Object::Object(double x, double y, double dx, double dy, double mass, ObjectType
   _type = type;
 }
 
+// Objektets position uppdateras baserat på den nuvarande hastigheten.
+void Object::move() {
+  _x += _dx;
+  _y += _dy;
+}
 
 // Getters för alla fält som tillhör Object.
 double Object::x() const {
@@ -109,6 +78,16 @@ void Object::applyForce(double fx, double fy) {
   _fy += fy;
 }
 
+void Object::setPosition(double x, double y) {
+  _x = x;
+  _y = y;
+}
+
+void Object::setVelocity(double dx, double dy) {
+  _dx = dx;
+  _dy = dy;
+}
+
 // Beräknar avståndet mellan två objekt.
 double Object::distance(Object* o) const {
   return std::sqrt(square(x() - o->x()) + square(y() - o->y()));
@@ -125,18 +104,16 @@ void Object::update(Universe universe) {
 
 // -- Metoder för Planet ------
 
+// Constructor för Planet.
+Planet::Planet(double x, double y, double dx, double dy, double radius, double mass, sf::Color* _color) : Object(x, y, dx, dy, mass, PlanetType) {
+  _radius = radius;
+  color = _color;
+}
+
 // Getter för Planet.radius.
 double Planet::radius() const {
   return _radius;
 }
-
-
-// Constructor för Planet.
-Planet::Planet(double x, double y, double dx, double dy, double radius, double mass) : Object(x, y, dx, dy, mass, PlanetType) {
-  _radius = radius;
-  color = PLANET_COLOR;
-}
-
 
 // Uppdaterar en planet för en frame.
 void Planet::update(Universe universe) {
@@ -204,15 +181,7 @@ void Planet::handleCollision(Planet* other) {
 
 // Ritar en planet på skärmen.
 void Planet::draw(sf::RenderTarget& target, const Universe* universe) const {
-  double scaledRadius = radius() * universe->scale();
-  sf::CircleShape shape(scaledRadius);
-  shape.setPointCount(PLANET_POINT_COUNT);
-  shape.setFillColor(*color);
-  Point scaledPoint = universe->scalePoint(Point(x(), y()));
-  int x0 = scaledPoint.x;
-  int y0 = scaledPoint.y;
-  shape.setPosition(x0 - scaledRadius, y0 - scaledRadius);
-  target.draw(shape);
+  universe->drawCircle(x(), y(), radius(), color, target);
 }
 
 // Ser om två planeter överlappar.
@@ -276,14 +245,23 @@ double Point::operator*(const Point o) const {
 }
 
 
-Planet* placeSatellite(Planet p, double distance, double radius) {
-  double speed = std::sqrt(GRAVITY_COEFFICIENT * p.mass() / distance);
+// Planet* placeSatellite(Planet p, double distance, double radius) {
+//   double speed = std::sqrt(GRAVITY_COEFFICIENT * p.mass() / distance);
   
-  return new Planet(p.x(), p.y()-distance, speed, 0, radius, 0.00001);
-}
+//   return new Planet(p.x(), p.y()-distance, speed, 0, radius, PLANET_MASS, PLANET_COLOR);
+// }
+
+
 
 // -- Metoder för Universe ------
 
+Universe::Universe() {
+  _x = 0;
+  _y = 0;
+  _scale = START_ZOOM;
+}
+
+// 'Zoomar in' universumet.
 void Universe::increaseScale(double s) {
   _scale *= s;
 }
@@ -293,30 +271,6 @@ Point Universe::scalePoint(Point p) const {
   int y = (p.y - yOrigin()) * scale();
 
   return Point(x, y);
-}
-
-// Sätter ut alla planeter i solsystemet.
-vector<Object*> initialCondition1() {
-  vector<Object*> objects;
-  Planet* mainPlanet = new Planet(550, 550, 0, 0, 80, 10000);
-  
-  objects.push_back(mainPlanet);
-  objects.push_back(placeSatellite(*mainPlanet, 1000, 40));
-  objects.push_back(placeSatellite(*mainPlanet, 1400, 60));
-  objects.push_back(placeSatellite(*mainPlanet, 2000, 40));
-  objects.push_back(new Planet(200, 200, 0.01, 0, 10, 10));
-  return objects;
-}
-
-vector<Object*> initialCondition2() {
-  vector<Object*> objects;
-  objects.push_back(new Planet(200, 210, 0.1, 0, 10, 1));
-  objects.push_back(new Planet(500, 200, 0, 0, 50, 10000));
-  return objects;
-}
-
-vector<Object*> Universe::initialCondition() {
-  return initialCondition1();
 }
 
 // Applicerar gravitation mellan alla objekt i universumet. Följer Newtons gravitationslag.
@@ -335,38 +289,14 @@ void Universe::applyGravity() {
   }
 }
 
-void Universe::resetVisits() {
-  visited = map<Point, int>();
-}
-
+// Raderar alla gamla objekt från minnet.
 void Universe::freeObjects() {
   for (Object* object : objects) {
     free(object);
   }
 }
 
-void Universe::clearVisited() {
-  if (TRAIL_DURATION >= 0) {
-    map<Point, int>::iterator iter = visited.begin();
-    while (iter != visited.end()) {
-      int lastVisit = iter->second;
-      if (currentTime - lastVisit >= TRAIL_DURATION) {
-        iter = visited.erase(iter);
-      } else {
-        ++iter;
-      }
-    }
-  }
-}
-  
-Universe::Universe() {
-  objects = initialCondition();
-  resetVisits();
-  _x = 0;
-  _y = 0;
-  _scale = 1.0;
-}
-
+// Getters för alla fält för Universe.
 double Universe::scale() const {
   return _scale;
 }
@@ -379,16 +309,18 @@ double Universe::yOrigin() const {
   return _y;
 }
 
+// Återstället universumet till utgångsläget.
 void Universe::reset() {
   freeObjects();
-  resetVisits();
-  objects = initialCondition();
+  objects = vector<Object*>();
 }
 
+// Reagerar på vilka knappar som är nedtryckta.
 void Universe::handleKeyPresses() {
   double scaling = SCALE_FACTOR;
   double moveDistance = CAMERA_MOVE_DISTANCE_FACTOR / scale();
-  
+
+  // Om spelaren trycker på någon av piltangenterna ska kameran flyttas.
   if (sf::Keyboard::isKeyPressed(sf::Keyboard::Up)) {
     translate(0, -moveDistance);
   }
@@ -401,6 +333,8 @@ void Universe::handleKeyPresses() {
   if (sf::Keyboard::isKeyPressed(sf::Keyboard::Right)) {
     translate(moveDistance, 0);
   }
+
+  // Om spelaren trycker på Shift eller Control ska skärmen zoomas in och ut.
   if (sf::Keyboard::isKeyPressed(sf::Keyboard::LShift)) {
     increaseScale(scaling);
   }
@@ -409,8 +343,8 @@ void Universe::handleKeyPresses() {
   }
 }
 
+// Updaterar universumet för en frame.
 void Universe::update() {
-  currentTime++;
   applyGravity();
 
   handleKeyPresses();
@@ -419,55 +353,95 @@ void Universe::update() {
     object->update(*this);
     double x = object->x();
     double y = object->y();
-    visited[Point(std::round(x), std::round(y))] = currentTime;
   }
-  clearVisited();
 }
 
+// Ritar ut universumet på skärmen.
 void Universe::draw(sf::RenderTarget& target, sf::RenderStates states) const {
-  for (pair<Point, int> element : visited) {
-    int x = get<0>(element).x;
-    int y = get<0>(element).y;
-    int lastVisit = get<1>(element);
-
-    if (TRAIL_DURATION != -2 && (TRAIL_DURATION == -1 || (currentTime - lastVisit < TRAIL_DURATION))) {
-      sf::RectangleShape shape(sf::Vector2f(TRAIL_WIDTH,TRAIL_WIDTH));
-      shape.setPosition(x - (int)xOrigin(), y - yOrigin());
-      shape.setFillColor(*TRAIL_COLOR);
-      target.draw(shape);        
-    }
-  }
-    
+  drawBackground(target);
   for (Object* object : objects) {
     object->draw(target, this);
   }
 }
 
+void drawStar(int x, int y, sf::RenderTarget& target) {
+  sf::RectangleShape rect(sf::Vector2f(1,1));
+  rect.setPosition(x * WIDTH / 1980 ,y * WIDTH / 1980);
+  rect.setFillColor(*STAR_COLOR);
+  target.draw(rect);
+}
+
+// Ritar några fina stjärnbilder i bakgrunden.
+void Universe::drawBackground(sf::RenderTarget& target) const {
+  // Ritar typ ut halva karlavagnen.
+  drawStar(200, 200, target);
+  drawStar(400, 240, target);
+  drawStar(180, 380, target);
+  drawStar(380, 440, target);
+  drawStar(500, 50, target);
+
+  // Ritary typ ut orion.
+  drawStar(1000, 700, target);
+  drawStar(1100, 730, target);
+  drawStar(1200, 710, target);
+  drawStar(950, 900, target);
+  drawStar(1350, 880, target);
+  drawStar(950, 400, target);
+  drawStar(1250, 440, target);
+  drawStar(1150, 350, target);
+}
+
+// Flyttar hela 'ytan' i någon riktning.
 void Universe::translate(double dx, double dy) {
   _x += dx;
   _y += dy;
+}
+
+// Flyttar hela 'ytan' till en absolut offset.
+void Universe::setOffset(double x, double y) {
+  _x = x;
+  _y = y;
 }
 
 void Universe::addObject(Object* o) {
   objects.push_back(o);
 }
 
-Player::Player(double x, double y) : Planet(x, y, 0, 0, SHIP_RADIUS, SHIP_MASS) {}
+void Universe::drawCircle(double x, double y, double radius, sf::Color* color, sf::RenderTarget& target) const {
+  double scaledRadius = radius * scale();
+  sf::CircleShape shape(scaledRadius);
+  shape.setPointCount(PLANET_POINT_COUNT);
+  shape.setFillColor(*color);
+  Point scaledPoint = scalePoint(Point(x, y));
+  int x0 = scaledPoint.x;
+  int y0 = scaledPoint.y;
+  shape.setPosition(x0 - scaledRadius, y0 - scaledRadius);
+  target.draw(shape);
+}
 
+// -- Metoder för Player ------
+
+// Constructor för Player.
+Player::Player(double x, double y) : Planet(x, y, 0, 0, SHIP_RADIUS, SHIP_MASS, PLAYER_COLOR) {}
+
+Player::Player() : Player(0, 0) {}
+
+// Applicerar en kraft på spelaren i någon riktning.
 void Player::push(double dx, double dy) {
   applyForce(dx, dy);
 }
 
-
+// Ritar spelaren på skärmen.
 void Player::draw(sf::RenderTarget& target, const Universe* universe) const {
-  drawFire(target, universe);
+  drawExhaust(target, universe);
   Planet::draw(target, universe);
 }
 
 // Ritar den gröna 'elden' bakom spelarens UFO.
-void Player::drawFire(sf::RenderTarget& target, const Universe* universe) const {
+void Player::drawExhaust(sf::RenderTarget& target, const Universe* universe) const {
   double dx = 0, dy = 0;
   double dist = 2;
+
   if (sf::Keyboard::isKeyPressed(sf::Keyboard::A)) {
     dx -= 1;
   }
@@ -480,28 +454,142 @@ void Player::drawFire(sf::RenderTarget& target, const Universe* universe) const 
   if (sf::Keyboard::isKeyPressed(sf::Keyboard::S)) {
     dy += 1;
   }
-  
-  double scaledRadius = radius() * universe->scale();
-  sf::CircleShape shape(scaledRadius);
-  shape.setPointCount(PLANET_POINT_COUNT);
-  shape.setFillColor(sf::Color::Green);
-  Point scaledPoint = universe->scalePoint(Point(x(), y()));
-  int x0 = scaledPoint.x;
-  int y0 = scaledPoint.y;
-  shape.setPosition(x0 - scaledRadius - dist * dx, y0 - scaledRadius - dist * dy);
-  target.draw(shape);  
+
+  universe->drawCircle(x() - dist * dx, y() - dist * dy, radius(), EXHAUST_COLOR, target);
 }
 
-void drawMainScreen(sf::RenderTarget& target) {
+// -- Metoder för Game ------
+
+// Constructor för Game.
+Game::Game() {
+  reset();
+  cameraIsLocked = false;
+  currentScreen = MENU_SCREEN;
+}
+
+void Game::add(Planet* p) {
+  universe.addObject(p);
+}
+
+void Game::centerCamera() {
+  double cameraX = player->x() - WIDTH / (universe.scale() * 2);
+  double cameraY = player->y() - HEIGHT / (universe.scale() * 2);
+  universe.setOffset(cameraX, cameraY);
+}
+
+// Updaterar en frame i spelet.
+void Game::update() {
+  handleKeyPresses();
+  if (currentScreen == INGAME) {
+    if (cameraIsLocked) {
+      centerCamera();
+    }
+    universe.update();
+  } else if (currentScreen == MENU_SCREEN) {
+    
+  }
+}
+
+// Startar om spelet.
+void Game::reset() {
+  universe.reset();
+  player = new Player(100, 100);
+  initializeUniverse();
+  centerCamera();
+}
+
+// Centrerar texten på skärmen.
+void centerText(int y, int fontSize, sf::Text& text) {
+  text.setCharacterSize(fontSize);
+  sf::FloatRect textRect = text.getLocalBounds();
+  text.setOrigin(textRect.left + textRect.width/2.0f, textRect.top  + textRect.height/2.0f);
+  text.setPosition(sf::Vector2f(WIDTH / 2.0f, y));
+}
+
+void Game::drawMainMenu(sf::RenderTarget& target) const {
+  sf::Text text;
+  text.setFont(font);
+  text.setFillColor(sf::Color::White);
+
+  text.setString(L"Jakobs (inte så vackra) rymdsimulation!");
+  centerText(100, 40 * 1980 / WIDTH, text);
+  target.draw(text);
+
+  text.setString(L"Använd WASD för att styra skeppet, och piltangenterna för att styra kameran.");
+  centerText(200, 20 * 1980 / WIDTH, text);
+  target.draw(text);
   
+  text.setString(L"Du kan även låsa kameran till skeppet genom att trycka 'C'.");
+  centerText(230, 20 * 1980 / WIDTH, text);
+  target.draw(text);
+
+  text.setString(L"Tryck 'Enter' för att fortsätta!");
+  centerText(260, 20 * 1980 / WIDTH, text);
+  target.draw(text);
+
+  text.setString(L"FAQ:");
+  centerText(320, 20 * 1980 / WIDTH, text);
+  target.draw(text);
+
+  text.setString(L"Q: Vad kan man egentligen göra i simulationen?");
+  centerText(340, 20 * 1980 / WIDTH, text);
+  target.draw(text);
+
+  text.setString(L"A: Inte mycket egentligen, man kan mest åka runt i ditt UFO och putta på olika planeter,");
+  centerText(360, 20 * 1980 / WIDTH, text);
+  target.draw(text);
+
+  text.setString(L"och se vad som händer med deras omloppsbanor.");
+  centerText(380, 20 * 1980 / WIDTH, text);
+  target.draw(text);
+}
+
+// Ritar spelet till skärmen.
+void Game::draw(sf::RenderTarget& target, sf::RenderStates states) const {
+  if (currentScreen == INGAME) {
+    target.draw(universe);
+  } else if (currentScreen == MENU_SCREEN) {
+    drawMainMenu(target);
+  }
+}
+
+void Game::handleKeyPresses() {
+  if (currentScreen == INGAME) {
+    double pushStrength = PLAYER_PUSH_STRENGTH;
+    if (sf::Keyboard::isKeyPressed(sf::Keyboard::A)) {
+      player->push(-pushStrength, 0);
+    }
+    if (sf::Keyboard::isKeyPressed(sf::Keyboard::D)) {
+      player->push(pushStrength, 0);
+    }
+    if (sf::Keyboard::isKeyPressed(sf::Keyboard::W)) {
+      player->push(0, -pushStrength);
+    }
+    if (sf::Keyboard::isKeyPressed(sf::Keyboard::S)) {
+      player->push(0, pushStrength);
+    }    
+  } else if (currentScreen == MENU_SCREEN) {
+    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Enter)) {
+      currentScreen = INGAME;
+    }
+  }
+}
+
+void Game::toggleCameraLock() {
+  cameraIsLocked = !cameraIsLocked;
 }
 
 int main() {
-  sf::RenderWindow window(sf::VideoMode(WIDTH, HEIGHT), "Hello world");
-  Universe universe;
-  Player player(100, 100);
-  universe.addObject(&player);
+  srand((unsigned)time(0)); 
+  sf::RenderWindow window(sf::VideoMode(WIDTH, HEIGHT), "Rymdsimulator");
+  Game game;
 
+  if (!font.loadFromFile("PressStart2P-Regular.ttf")) {
+    std::cout << "Kunde inte ladda fonten!" << std::endl;
+    return -1;
+  }
+
+  
   while (window.isOpen()) {
     sf::Event event;
 
@@ -509,31 +597,17 @@ int main() {
       if (event.type == sf::Event::Closed) {
         window.close();
       } else if (event.type == sf::Event::KeyPressed) {
-        if (event.key.code == sf::Keyboard::Space) {
-          universe.reset();
-        } else if (event.key.code == sf::Keyboard::Q) {
+        if (event.key.code == sf::Keyboard::Q) {
           window.close();
+        } else if (event.key.code == sf::Keyboard::C) {
+          game.toggleCameraLock();
         }
       }
     }
-
-    double pushStrength = 0.001;
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::A)) {
-      player.push(-pushStrength, 0);
-    }
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::D)) {
-      player.push(pushStrength, 0);
-    }
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::W)) {
-      player.push(0, -pushStrength);
-    }
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::S)) {
-      player.push(0, pushStrength);
-    }
     
-    window.clear(*Colors::SPACE);
-    universe.update();
-    window.draw(universe);
+    window.clear(*SPACE_COLOR);
+    game.update();
+    window.draw(game);
 
     window.display();
     usleep(WAIT_TIME);
