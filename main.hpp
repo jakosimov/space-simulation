@@ -10,12 +10,12 @@ class Universe;
 enum ObjectType { PlanetType, PlaceholderType };
 
 class Object {
-  double _x, _y, _dx, _dy, _fx, _fy, _mass;
   ObjectType _type;
 
   void move();
 
 protected:
+  double _x, _y, _dx, _dy, _fx, _fy, _mass;
   Object(double,double,double,double,double,ObjectType);
 
 public:
@@ -35,11 +35,20 @@ public:
 };
 
 struct Point {
-  int x, y;
-  Point(int, int);
+  // Punkt fungerar i detta fall precis på samma sätt som en vektor.
+  
+  double x, y;
+  Point(double, double);
   bool operator>(const Point) const;
   bool operator<(const Point) const;
   bool operator==(const Point) const;
+  Point operator+(const Point) const;
+  Point operator-(const Point) const;
+  Point operator*(double) const;
+  Point normalize() const;
+  double operator*(const Point) const;
+  
+  double magnitude() const;
 };
 
 class Universe : public sf::Drawable {
@@ -54,6 +63,7 @@ class Universe : public sf::Drawable {
   void resetVisits();
   void freeObjects();
   void clearVisited();
+  void handleKeyPresses();
 
 public:
   Universe();
@@ -61,24 +71,37 @@ public:
   double yOrigin() const;
   double scale() const;
   vector<Object*> getObjects();
+  Point scalePoint(Point) const;
   void increaseScale(double);
   void reset();
   void update();
   void translate(double, double);
+  void addObject(Object*);
   virtual void draw(sf::RenderTarget&, sf::RenderStates) const;
 };
 
 class Planet : public Object {
   double _radius;
+  
+protected:
+  sf::Color* color;
 
 public:
   double radius() const;
   Planet(double, double, double, double, double, double);
-  void draw(sf::RenderTarget&, const Universe*) const;
-  bool isOverlapping(Planet planet) const;
+  virtual void draw(sf::RenderTarget&, const Universe*) const;
+  bool isOverlapping(Planet) const;
   void update(Universe);
+  void handleCollision(Planet*);
 };
 
-Planet* placeSatellite(Planet, double);
-Point scalePoints(Point p, const Universe*);
+class Player : public Planet {
+  void drawFire(sf::RenderTarget&, const Universe*) const;
+  
+public:
+  Player(double, double);
+  
+  void push(double, double);
+  void draw(sf::RenderTarget&, const Universe*) const;
+};
 
