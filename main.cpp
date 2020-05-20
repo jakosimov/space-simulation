@@ -244,15 +244,6 @@ double Point::operator*(const Point o) const {
   return x * o.x + y * o.y;
 }
 
-
-// Planet* placeSatellite(Planet p, double distance, double radius) {
-//   double speed = std::sqrt(GRAVITY_COEFFICIENT * p.mass() / distance);
-  
-//   return new Planet(p.x(), p.y()-distance, speed, 0, radius, PLANET_MASS, PLANET_COLOR);
-// }
-
-
-
 // -- Metoder för Universe ------
 
 Universe::Universe() {
@@ -281,7 +272,10 @@ void Universe::applyGravity() {
         continue;
       }
       double distance = source->distance(target);
+
+      // Kraftens storlek enligt Newtons gravitationslag.
       double forceStrength = GRAVITY_COEFFICIENT * source->mass() * target->mass() / square(distance);
+      
       double forceX = forceStrength * (source->x() - target->x()) / distance;
       double forceY = forceStrength * (source->y() - target->y()) / distance;
       target->applyForce(forceX, forceY);
@@ -292,7 +286,7 @@ void Universe::applyGravity() {
 // Raderar alla gamla objekt från minnet.
 void Universe::freeObjects() {
   for (Object* object : objects) {
-    free(object);
+    free(object); // Frigör utrymmet som pointern pekar på.
   }
 }
 
@@ -351,8 +345,6 @@ void Universe::update() {
   
   for (Object* object : objects) {
     object->update(*this);
-    double x = object->x();
-    double y = object->y();
   }
 }
 
@@ -364,6 +356,7 @@ void Universe::draw(sf::RenderTarget& target, sf::RenderStates states) const {
   }
 }
 
+// Ritar en stjärna på skärmen.
 void drawStar(int x, int y, sf::RenderTarget& target) {
   sf::RectangleShape rect(sf::Vector2f(1,1));
   rect.setPosition(x * WIDTH / 1980 ,y * WIDTH / 1980);
@@ -467,10 +460,12 @@ Game::Game() {
   currentScreen = MENU_SCREEN;
 }
 
-void Game::add(Planet* p) {
+// Lägger till ett nytt objekt till universumet.
+void Game::add(Object* p) {
   universe.addObject(p);
 }
 
+// Centrerar kameran på spelaren.
 void Game::centerCamera() {
   double cameraX = player->x() - WIDTH / (universe.scale() * 2);
   double cameraY = player->y() - HEIGHT / (universe.scale() * 2);
@@ -485,8 +480,6 @@ void Game::update() {
       centerCamera();
     }
     universe.update();
-  } else if (currentScreen == MENU_SCREEN) {
-    
   }
 }
 
@@ -506,6 +499,7 @@ void centerText(int y, int fontSize, sf::Text& text) {
   text.setPosition(sf::Vector2f(WIDTH / 2.0f, y));
 }
 
+// Ritar startskärmen till skärmen.
 void Game::drawMainMenu(sf::RenderTarget& target) const {
   sf::Text text;
   text.setFont(font);
@@ -553,6 +547,7 @@ void Game::draw(sf::RenderTarget& target, sf::RenderStates states) const {
   }
 }
 
+// Här hanteras spelet användarens input som inte är direkt relaterat till simulationen.
 void Game::handleKeyPresses() {
   if (currentScreen == INGAME) {
     double pushStrength = PLAYER_PUSH_STRENGTH;
@@ -575,6 +570,7 @@ void Game::handleKeyPresses() {
   }
 }
 
+// Togglar huruvida kameran ska vara låst på spelaren.
 void Game::toggleCameraLock() {
   cameraIsLocked = !cameraIsLocked;
 }
@@ -584,12 +580,14 @@ int main() {
   sf::RenderWindow window(sf::VideoMode(WIDTH, HEIGHT), "Rymdsimulator");
   Game game;
 
+  
+  // Försöker ladda in fonten som används i startskärmen;
   if (!font.loadFromFile("PressStart2P-Regular.ttf")) {
     std::cout << "Kunde inte ladda fonten!" << std::endl;
     return -1;
   }
 
-  
+  // Huvudloopen.
   while (window.isOpen()) {
     sf::Event event;
 
@@ -606,11 +604,12 @@ int main() {
     }
     
     window.clear(*SPACE_COLOR);
+    
     game.update();
     window.draw(game);
 
     window.display();
-    usleep(WAIT_TIME);
+    usleep(WAIT_TIME); // Detta är egentligen inte det bästa sättet att hantera det på, men det fungerar helt okej.
   }
 
   return 0;

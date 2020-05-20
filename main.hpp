@@ -140,7 +140,7 @@ class Game : public sf::Drawable {
 
   void handleKeyPresses();
   void initializeUniverse();
-  void add(Planet*);
+  void add(Object*);
   void centerCamera();
 
 public:
