@@ -139,24 +139,32 @@ void Planet::handleCollision(Planet* other) {
   // Försök inte förstå dig på detta, bara en massa konstig matte och fysik.
   
   Planet o = *other;
+
+  // Spara objektens positioner som vektorer.
   Point pos = Point(x(), y());
   Point pos2 = Point(o.x(), o.y());
 
-  Point delta = pos - pos2;
-  double distance = delta.magnitude();
-  Point mtd = delta * (((radius() + o.radius()) - distance) / distance);
+  // Spara objektens hastigheter
+  Point velo = Point(dx(), dy());
+  Point velo2 = Point(o.dx(), o.dy());
 
+  // Reciprokerna för objektens massor.
   double massInverse = 1.0 / mass();
   double massInverse2 = 1.0 / o.mass();
 
-  Point velo = Point(dx(), dy());
-  Point velo2 = Point(o.dx(), o.dy());
+  Point delta = pos - pos2; // En vektor som går från pos2 till pos.
   
-  Point newPos = pos + (mtd * (massInverse / (massInverse + massInverse2)));
-  Point newPos2 = pos2 - (mtd * (massInverse2 / (massInverse + massInverse2)));
+  Point deltaV = velo - velo2; // Kan tänkas som första objektets hastighet relativt till
+                               // det andra.
+  
+  double distance = delta.magnitude(); // Avståndet mellan objekten.
 
-  Point v = velo - velo2;
-  double vn = v * mtd.normalize();
+
+  // Detta är det minsta avståndet som objektet måste resa
+  // för att undvika en kollision.
+  Point mtd = delta * (((radius() + o.radius()) - distance) / distance);
+  
+  double vn = deltaV * mtd.normalize(); // Räknar ut skalärprodukten mellan vektorerna.
 
   if (vn > 0.0) {
     return;
@@ -167,12 +175,18 @@ void Planet::handleCollision(Planet* other) {
   Point impulse = mtd.normalize() * i;
   
   // Här ändras den faktiska hastigheten och positionen
+  Point newPos = pos + (mtd * (massInverse / (massInverse + massInverse2)));
+  Point newPos2 = pos2 - (mtd * (massInverse2 / (massInverse + massInverse2)));
+  
+  Point newVelo = velo + (impulse * massInverse);
+  Point newVelo2 = velo2 - (impulse * massInverse2);
+
+  // Uppdatera positionerna för 
   _x = newPos.x;
   _y = newPos.y;
   other->_x = newPos2.x;
   other->_y = newPos2.y;
-  Point newVelo = velo + (impulse * massInverse);
-  Point newVelo2 = velo2 - (impulse * massInverse2);
+  
   _dx = newVelo.x;
   _dy = newVelo.y;
   other->_dx = newVelo2.x;
@@ -239,7 +253,7 @@ double Point::magnitude() const {
   return std::sqrt(x * x + y * y);
 }
 
-// Beräknar 'dot product' för två vektorer.
+// Beräknar skalärprodukten för två vektorer.
 double Point::operator*(const Point o) const {
   return x * o.x + y * o.y;
 }

@@ -2,3 +2,6 @@
 *#
 *.o
 output
+*.aux
+*.log
+*.pdf
